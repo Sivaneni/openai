@@ -7,16 +7,16 @@ from datetime import datetime, timedelta
 from dateutil import parser
 
 
-def chat_completion_request(messages, functions=None, function_call=None, model="gpt-3.5-turbo-0613"):
+def chat_completion_request(messages, tools=None, tool_choice=None, model="gpt-3.5-turbo-0613"):
     headers = {
         "Content-Type": "application/json",
-        "Authorization": "Bearer " + "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",
+        "Authorization": "Bearer " + "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",
     }
     json_data = {"model": model, "messages": messages}
-    if functions is not None:
-        json_data.update({"functions": functions})
-    if function_call is not None:
-        json_data.update({"function_call": function_call})
+    if tools is not None:
+        json_data.update({"tools": tools})
+    if tool_choice is not None:
+        json_data.update({"tool_choice": tool_choice})
         json_data.update({"temperature": 1.0})
     try:
         response = requests.post(
@@ -52,35 +52,57 @@ all_doctors = {
         # Add more doctor types and their respective lists
     }
 list_of_doctors=[doctor for sublist in all_doctors.values() for doctor in sublist]
-def get_doctor(arguments):
+def get_doctor_by_name(arguments):
     
-
+    print(f"function called get_doctor_by_name {arguments}")
     # Convert the doctor type to title case to handle case-insensitivity
-    doctor_type = json.loads(arguments)['typeofDoctor']
+    doctor_type = json.loads(arguments)['name_of_doctor']
     # check if string contains Dr . or Dr  
     if doctor_type.startswith("Dr "):
         doctor_type=doctor_type[3:]
     else:
         doctor_type=doctor_type
+
+    if 'Dr. ' + doctor_type.capitalize() in list_of_doctors:
+        return f"{doctor_type} is available  what date and time would you like to perfer for appointement"
+    else:
+        return f"No doctors found for the search you provided: {doctor_type}"
+
+def get_doctor_by_department(arguments):
+
+    print(f"function called get_doctor_by_department {arguments}")
+    
+    # Convert the doctor type to title case to handle case-insensitivity
+    department = json.loads(arguments)['name_of_department']
+    # check if string contains Dr . or Dr  
+   
    
     
     #logging.info(list_of_doctors)
 
     # Check if the provided doctor type exists
-    if doctor_type in list(all_doctors.keys()):
-        return f"{', '.join(all_doctors[doctor_type])} is available and please confirm the doctor" 
-    elif 'Dr. ' + doctor_type.capitalize() in list_of_doctors:
-        return f"{doctor_type} is available  what date and time would you like to perfer for appointement"
+    if department in list(all_doctors.keys()):
+        return f"{', '.join(all_doctors[department])} is available and please confirm the doctor" 
+ 
     else:
-        return f"No doctors found for the search you provided: {doctor_type}"
-def fix_time_date_appointement(arguments):
-    timeslot=json.loads(arguments)['timeslot']
+        return f"No doctors found for the search you provided: {department}"
+def get_time_date_book_appointement(arguments):
+    print(f"function called get_time_date_book_appointement {arguments}")
     
-    try:
+    keys_to_check=["timeslot","Date"]
+    for key in keys_to_check:
 
-        Date=json.loads(arguments)['Date']
-    except KeyError:
-        return input("Agent: please enter date of appointement with doctor")
+        try:
+            print(key)
+            value=json.loads(arguments)[key]
+            print(value)
+            if value is None:
+                return f"please enter {key} for appointement with doctor"
+
+        except KeyError:
+            return f"Agent: please enter {key} for appointement with doctor"
+    timeslot=json.loads(arguments)['timeslot']
+    Date=json.loads(arguments)['Date']
     timeslot=str(timeslot)
     try:
     
@@ -93,10 +115,10 @@ def fix_time_date_appointement(arguments):
                 today = datetime.strptime(Date, "%Y-%m-%d")
                 current_year = datetime.now().year
                 new_date = datetime(year=current_year, month=today.month, day=today.day)
-                print(type(new_date))
+                #print(type(new_date))
                 today = new_date
                 #today = today.strptime(today, "%Y-%m-%d")
-                print(today)
+                #print(today)
             else:
                 today = datetime.now() + timedelta(days=0)
             # Construct the full datetime string for tomorrow with the given time
@@ -133,7 +155,7 @@ def fix_time_date_appointement(arguments):
                     #print( slots_available)
                     isslotbooked=False
                     nearestslot=smallest_difference(ptime,slots_available)
-                    print(nearestslot)
+                    #print(nearestslot)
                     #print(ptime)
                     
                 #caluculate the smallest differnce with an list and an given number
@@ -144,8 +166,9 @@ def fix_time_date_appointement(arguments):
        
     except ValueError:
         return "Invalid input sent"
-def fixappointement_doctor(arguments):
-    doctorname=json.loads(arguments)['doctorname']
+
+def get_time_date_doctor_book_appointement(arguments):
+    doctorname=json.loads(arguments)['name_of_doctor']
     date=json.loads(arguments)['Date']
     timeslot=json.loads(arguments)['timeslot']
     if doctorname.startswith("Dr. "):
@@ -157,10 +180,9 @@ def fixappointement_doctor(arguments):
         return f"{', '.join(all_doctors[doctorname])} is available and please confirm the doctor" 
     elif 'Dr. ' + doctorname.capitalize() in list_of_doctors:
         dict1=json.loads(arguments)
-        del dict1["doctorname"]
+        del dict1["name_of_doctor"]
         arguments=json.dumps(dict1)
-        return f"{doctorname} available.{fix_time_date_appointement(arguments)}"
+        return f"{doctorname} available.{get_time_date_book_appointement(arguments)}"
         
     else:
         return f"No doctors found with name: {doctorname}"
-
