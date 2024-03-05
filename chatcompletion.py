@@ -9,6 +9,7 @@ from dateutil import parser
 from helper_functions import *
 import logging
 import time
+
 logging.basicConfig(level=logging.INFO, filename='app.log')
 
 tools = [
@@ -132,45 +133,28 @@ tools = [
 
 ]
 user_input = input("Please enter your question here: (if you want to exit then write 'exit' or 'bye'.) ")
-
+    """
+    This function handles user input, interacts with a chat completion request, and logs messages.
+    """
 def user_input():
     messages = [{"role": "system", "content": "Don't make assumptions about what values to plug into functions. Ask for clarification if a user request is ambiguous."}]
-    
-    messages.append({"role": "assistant", "content": "Book an appointement with Doctor in Super Clinic and Don't make assumptions about what values to plug into functions. Ask for clarification to user if request dont have parameters to be passed to function."}),
 
     user_input = input("User: ")
-
     while user_input.strip().lower() != "exit" and user_input.strip().lower() != "bye":
-
-        # prompt
-        
         messages.append({"role": "user", "content": user_input})
-        print(messages)
-        # calling chat_completion_request to call ChatGPT completion endpoint
-        chat_response = chat_completion_request(
-            messages, tools=tools
-        )
-        # fetch response of ChatGPT and call the function
-        #print(chat_response.json())
-        messages= messages[:-1]
+        chat_response = chat_completion_request(messages, tools=tools)
+        messages = messages[:-1]
         try:
-
             if chat_response.json()["choices"][0]["message"] is not None:
-
                 assistant_message = chat_response.json()["choices"][0]["message"]
                 logging.info(f'assistant_message-: {chat_response.json()}')
-        except KeyError :
-
-                assistant_message = chat_response.json()["error"]["code"]
-                logging.info(f'assistant_message-: {assistant_message}')
-                print(f'{assistant_message} waiting for  20s')
-                time.sleep(21)
-                continue
-
-
-            
+        except KeyError:
+            assistant_message = chat_response.json()["error"]["code"]
+            logging.info(f'assistant_message-: {assistant_message}')
+            print(f'{assistant_message} waiting for  20s')
+            time.sleep(21)
+            continue
         if assistant_message['content']:
-            
             print("message from agent without calling function")
             messages.append({"role": "assistant", "content": assistant_message['content']})
             print("Agent : ", assistant_message['content'])
@@ -178,14 +162,11 @@ def user_input():
             print(assistant_message["tool_calls"])
             fn_name = assistant_message["tool_calls"][0]["function"]["name"]
             arguments = assistant_message["tool_calls"][0]["function"]["arguments"]
-            #print(globals())
-            f1=globals()[fn_name]
+            f1 = globals()[fn_name]
             result = f1(arguments)
             logging.info(f'result-: {result}')
             print("Agent : ", result)
             messages.append({"role": "assistant", "content": result})
-            #user_input = input("User ")
         user_input = input("User ")
-        
 
-user_input()
+user_input()    
